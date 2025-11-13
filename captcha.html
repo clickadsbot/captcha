@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure CAPTCHA Verification</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* CSS from the original template for aesthetic and animation */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: containerSlide 0.8s ease-out;
+            position: relative;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%);
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            animation: logoPulse 2s infinite ease-in-out;
+            box-shadow: 0 0 20px rgba(106, 17, 203, 0.5);
+        }
+        
+        h1 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 5px;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            animation: fadeIn 1.2s ease-out;
+        }
+        
+        .content {
+            padding: 25px;
+        }
+        
+        /* New Styles for Screens */
+        .screen {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        
+        .screen.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .status {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .status i {
+            font-size: 30px;
+            margin-bottom: 5px;
+            animation: iconBounce 1s ease;
+        }
+        
+        .status h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .status p {
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: rgba(46, 204, 113, 0.2);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            animation: statusPulse 2s infinite;
+        }
+        
+        .status.error {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            animation: shake 0.5s ease;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .input-display {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        #generated-captcha {
+            width: 100%;
+            max-width: 200px;
+            padding: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            text-align: center;
+            border: none;
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #2ecc71;
+            outline: none;
+            cursor: default;
+            letter-spacing: 5px;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #entered-captcha {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #2a5c82 0%, #6a11cb 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: white;
+            animation: slideIn 0.8s ease-out;
+        }
+        
+        .user-info div {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .user-info strong {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Animation keyframes (included for completeness) */
+        @keyframes containerSlide { from { opacity: 0; transform: translateY(50px) scale(0.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes logoPulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes iconBounce { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes statusPulse { 0% { box-shadow: 0 0 0 rgba(46, 204, 113, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(46, 204, 113, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); } }
+        @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); } 100% { transform: translateX(0); } }
+        @keyframes shine { 0% { opacity: 0; transform: rotate(30deg) translate(0, -100%); } 20% { opacity: 1; } 100% { opacity: 0; transform: rotate(30deg) translate(0, 100%); } }
+        
+        /* Particle styles (included for completeness) */
+        .floating-shapes { position: absolute; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; overflow: hidden; }
+        .shape { position: absolute; background: rgba(255, 255, 255, 0.03); border-radius: 50%; }
+        .shape:nth-child(1) { width: 80px; height: 80px; top: -20px; left: -20px; animation: float 15s infinite linear; }
+        .shape:nth-child(2) { width: 120px; height: 120px; bottom: -50px; right: -50px; animation: float 18s infinite linear reverse; }
+        .shape:nth-child(3) { width: 60px; height: 60px; top: 40%; left: 80%; animation: float 12s infinite linear; }
+        .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        .particle { position: absolute; background: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: floatParticle 15s infinite linear; }
+        @keyframes float { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(180deg); } 100% { transform: translateY(0) rotate(360deg); } }
+        @keyframes floatParticle { 0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-100vh) translateX(100px) rotate(360deg); opacity: 0; } }
+    </style>
+</head>
+<body onload="createParticles(); initializeApp();">
+    <div class="container">
+        <div class="floating-shapes">
+            <div class="shape"></div>
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+        <div class="particles" id="particles"></div>
+        
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+            </div>
+            <h1>CAPTCHA Verification</h1>
+            <div class="subtitle">Prove you're not a robot</div>
+        </div>
+        
+        <div class="content">
+            
+            <div id="init-check-screen" class="screen active">
+                <div class="status">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                    <h2>Checking Account Status</h2>
+                    <p>Detecting previous device verifications...</p>
+                </div>
+            </div>
+
+            <div id="captcha-screen" class="screen">
+                <div class="status" id="status-box">
+                    <i class="fas fa-lock"></i>
+                    <h2 id="status-heading">Primary Account Detected</h2>
+                    <p id="status-message">Please complete CAPTCHA to proceed.</p>
+                </div>
+
+                <div class="form-group">
+                    <div class="input-display">
+                        <input type="text" readonly id="generated-captcha" value="Loading...">
+                    </div>
+                    <div>
+                        <input type="text" id="entered-captcha" placeholder="Enter the code here" autofocus>
+                    </div>
+                </div>
+
+                <button type="button" onclick="check()" class="btn" id="verify-btn">
+                    <i class="fas fa-check-circle"></i> Verify Code
+                </button>
+                
+                <button type="button" onclick="closeApp()" class="btn" id="close-btn" style="display: none;">
+                    <i class="fas fa-sign-out-alt"></i> Return to Chat
+                </button>
+                
+                <button type="button" onclick="generate()" id="gen" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Generate New
+                </button>
+            </div>
+            
+            <div id="fake-account-screen" class="screen">
+                <div class="status error">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h2>Multiple Accounts Detected</h2>
+                    <p>This device is already logged in with a primary account.</p>
+                </div>
+                
+                <div class="user-info">
+                    <div><strong>Current User ID:</strong> <span id="current-user-id">Loading...</span></div>
+                    <div><strong>Primary ID:</strong> <span id="primary-user-id">Loading...</span></div>
+                </div>
+                
+                <div class="instructions">
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; text-align: center;">
+                        Only the first verified account is authorized. Access denied.
+                    </p>
+                </div>
+                
+                <button class="btn" onclick="closeApp()">
+                    <i class="fas fa-times-circle"></i> Close Window
+                </button>
+            </div>
+            
+        </div>
+        
+        <div class="footer">
+            <p>Secure CAPTCHA System • Anti-Bot Defense</p>
+        </div>
+    </div>
+
+    <script>
+        let captcha;
+        let alphabets = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
+        
+        const statusBox = document.getElementById('status-box');
+        const verifyBtn = document.getElementById('verify-btn');
+        const closeBtn = document.getElementById('close-btn');
+        const captchaScreen = document.getElementById('captcha-screen');
+        const initScreen = document.getElementById('init-check-screen');
+        const fakeScreen = document.getElementById('fake-account-screen');
+        
+        // --- TELEGRAM / PERSISTENCE SETUP ---
+        const WebApp = window.Telegram && window.Telegram.WebApp;
+        let currentUserId = null;
+        const urlParams = new URLSearchParams(window.location.search);
+const botName = urlParams.get("bot") || "default_bot";
+const BOT_ID_KEY = 'captcha_primary_user_@Booxterv0Bot';// Local Storage Key
+
+        // 1. Get current user ID
+        if (WebApp && WebApp.initDataUnsafe && WebApp.initDataUnsafe.user) {
+            currentUserId = WebApp.initDataUnsafe.user.id.toString();
+            WebApp.ready();
+        } else {
+            // Fallback for demo/testing outside Telegram
+            console.warn("Not running in Telegram. Using a random demo ID.");
+            currentUserId = 'DEMO_' + Math.floor(Math.random() * 10000000); 
+        }
+
+        // --- CORE LOGIC FUNCTIONS ---
+
+        const closeApp = () => {
+            if (WebApp) {
+                WebApp.close();
+            } else {
+                alert('Verification flow complete. Please close the browser window.');
+            }
+        };
+
+        const generate = () => {
+            let code = [];
+            for (let i = 0; i < 6; i++) {
+                if (Math.random() > 0.5) {
+                    code.push(alphabets[Math.floor(Math.random() * alphabets.length)]);
+                } else {
+                    code.push(Math.floor(Math.random() * 10).toString());
+                }
+            }
+            captcha = code.join('');
+
+            document.getElementById('generated-captcha').value = captcha;
+            document.getElementById("entered-captcha").value = '';
+            document.getElementById("entered-captcha").focus();
+
+            // Reset status and buttons
+            statusBox.classList.remove('success', 'error');
+            statusBox.innerHTML = '<i class="fas fa-lock"></i><h2>Primary Account Detected</h2><p>Please enter the code shown below.</p>';
+            verifyBtn.style.display = 'block';
+            verifyBtn.disabled = false;
+            closeBtn.style.display = 'none';
+        };
+
+        const initializeApp = () => {
+            initScreen.classList.add('active'); // Show spinner first
+            
+            setTimeout(() => {
+                const storedUserId = localStorage.getItem(BOT_ID_KEY);
+                
+                if (storedUserId) {
+                    if (storedUserId === currentUserId) {
+                        // SCENARIO 1: PRIMARY ACCOUNT - Proceed to CAPTCHA
+                        initScreen.classList.remove('active');
+                        captchaScreen.classList.add('active');
+                        generate();
+                        
+                    } else {
+                        // SCENARIO 2: MULTIPLE ACCOUNTS DETECTED - Show Block Screen
+                        document.getElementById('current-user-id').textContent = currentUserId;
+                        document.getElementById('primary-user-id').textContent = storedUserId;
+
+                        initScreen.classList.remove('active');
+                        fakeScreen.classList.add('active');
+                    }
+                } else {
+                    // SCENARIO 3: FIRST-TIME USER - Proceed to CAPTCHA (ID will be saved on success)
+                    initScreen.classList.remove('active');
+                    captchaScreen.classList.add('active');
+                    generate();
+                }
+            }, 1000); // Simulate network latency for the check
+        };
+        
+        const check = async () => {
+            const enteredCaptcha = document.getElementById("entered-captcha").value.trim();
+            statusBox.classList.remove('pulse', 'success', 'error');
+            
+            if (enteredCaptcha === captcha) {
+                // SUCCESS STATE
+                statusBox.classList.add('success');
+                statusBox.innerHTML = '<i class="fas fa-check-circle"></i><h2>Verification Successful</h2><p>Click "Return to Chat" below.</p>';
+                
+                document.getElementById("entered-captcha").disabled = true;
+                verifyBtn.style.display = 'none';
+                closeBtn.style.display = 'block'; // Show Close Button
+
+                // PERSISTENCE: Save Primary ID if this is the first successful verification
+                if (!localStorage.getItem(BOT_ID_KEY)) {
+                    localStorage.setItem(BOT_ID_KEY, currentUserId);
+                    console.log(`Saved new primary ID: ${currentUserId}`);
+                }
+                
+                // ********************************************************
+                // ******* ACTUAL WEBHOOK SENDING CODE (MANDATORY) ********
+                // ********************************************************
+                try {
+                    // NOTE: '<% options.url %>' is a placeholder. Replace it with your actual bot webhook URL
+                    const WEBHOOK_URL = '<% options.url %>'; 
+                    
+                    await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            user_id: currentUserId,
+                            success: true,
+                            timestamp: new Date().toISOString(),
+                            captcha_code: captcha 
+                        })
+                    });
+                    console.log("Webhook sent successfully for user:", currentUserId);
+                } catch (error) {
+                    console.error("Error sending webhook:", error);
+                }
+                
+            } else {
+                // ERROR STATE
+                statusBox.classList.add('error');
+                statusBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i><h2>Verification Failed</h2><p>Code mismatch. A new CAPTCHA has been generated.</p>';
+                generate(); 
+            }
+        };
+
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            particlesContainer.innerHTML = ''; 
+            const particlesCount = 30;
+            
+            for (let i = 0; i < particlesCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                
+                const size = Math.random() * 5 + 2;
+                const posX = Math.random() * 100;
+                const delay = Math.random() * 15;
+                const duration = Math.random() * 10 + 15;
+                
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}%`;
+                particle.style.bottom = `-10px`;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = `${duration}s`;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+    </script>
+</body>
+</html>
